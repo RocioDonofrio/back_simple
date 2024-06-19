@@ -1,0 +1,58 @@
+@usersp = http://localhost:3000/user/usersp
+@login = http://localhost:3000/user/login
+
+@getData =http://localhost:3000/user/getData
+
+@addMateria =http://localhost:3000/user/addMateria
+
+@cursar =http://localhost:3000/user/cursar
+
+@getMateriaById = http://localhost:300/user/getMateriaById
+
+
+POST {{login}}
+Content-Type: application/json
+
+{
+    "dni" : "8",
+    "password" : "1234"
+}
+
+### Crear usuario
+
+POST {{usersp}}
+Content-Type: application/json
+
+{
+    "dni" : "10",
+    "nombre" : "juan",
+    "password" : "1234"
+}
+
+### Obtener materias (requiere autenticación)
+
+GET {{getData}}
+auth: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMjQiLCJpYXQiOjE3MTc1OTA1OTMsImV4cCI6MTcxNzU5MTQ5M30.PzziAHXkPLqyvqEGx1xEiG-4WNe6KjROA66Frb9STPA
+
+
+### Agregar una nueva materia 
+
+POST {{addMateria}}
+Content-Type: application/json
+
+{
+    "nombre":"Software"
+}
+
+### Relacionar un usuario con una materia
+POST {{cursar}}
+Content-Type: application/json
+
+{
+  "dni": "9",
+  "idMateria": 9
+}
+
+### Obtener materias cursadas por un alumno 
+GET {{getMateriaById}}/9
+auth: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMjQiLCJpYXQiOjE3MTc1OTA1OTMsImV4cCI6MTcxNzU5MTQ5M30.PzziAHXkPLqyvqEGx1xEiG-4WNe6KjROA66Frb9STPA
