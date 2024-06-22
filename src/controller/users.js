@@ -1,113 +1,228 @@
 import { connect } from "../databases";
 import jwt from "jsonwebtoken";
-const claveSecreta = process.env.SECRET_KEY;
+const secreto = process.env.SECRET_KEY;
 
 export const logIn = async (req, res) => {
   try {
-    //obtener los datos de la request - PASO 1
-    const { dni, password } = req.body;
-
-    //obtener el objeto conexión - PASO 2
+    const { dni, pass } = req.body;
     const cnn = await connect();
 
-    const q = `SELECT pass FROM alumno WHERE dni=?`;
-    const value = [dni];
+    const q = "SELECT pass FROM alumno WHERE dni=?";
+    const parametros = [dni];
 
-    const [result] = await cnn.query(q, value);
-
-    if (result.length > 0) {
-      //el usuario existe
-      //comprar las contraseñas
-      if (result[0].pass === password) {
-        const token = getToken({ dni: dni });
-        return res
-          .status(200)
-          .json({ message: "correcto", success: true, token: token });
-      } else {
-        return res
-          .status(400)
-          .json({ message: "la contraseña no coincide", success: false });
-      }
-    } else {
+    const [row] = await cnn.query(q, parametros);
+    if (row.length === 0)
       return res
         .status(400)
-        .json({ message: "user no existe", success: false });
+        .json({ success: false, message: "usuario no existe" });
+
+    if (pass === row[0].pass) {
+      const token = getToken({ sub: dni });
+      return res
+        .status(200)
+        .json({ success: true, message: "Correcto", token: token });
+    } else {
+      return res
+        .status(401)
+        .json({ success: false, message: "Contraseña incorrecta" });
     }
   } catch (error) {
-    res.status(500).json({ message: "fallo en chatch", error: error });
+    console.log("error de login", error.message);
+    return res.status(500).json({ message: "error", error: error });
   }
 };
 
-const validate = async (campo, valor, tabla, cnn) => {
-  const q = `SELECT * FROM ${tabla} WHERE ${campo}=?`;
-  const value = [valor];
-
-  const [result] = await cnn.query(q, value);
-
-  return result.length === 1; 
+const userExist = async (cnn, tabla, atributo, valor) => {
+  try {
+    const [row] = await cnn.query(
+      `SELECT * FROM ${tabla} WHERE ${atributo}=?`,
+      [valor]
+    );
+    return row.length > 0;
+  } catch (error) {
+    console.log("userExist", error);
+  }
 };
 
 export const createUsers = async (req, res) => {
   try {
     const cnn = await connect();
-    const { dni, nombre, password } = req.body;
+    const { nombre, dni, pass } = req.body;
 
-    const userExist = await validate("dni", dni, "alumno", cnn);
+    const dniExist = await userExist(cnn, "alumno", "dni", dni);
 
-    if (userExist)
-      return res.status(400).json({ message: "el usuario ya existe" });
-
-    const [result] = await cnn.query(
-      "INSERT INTO alumno ( dni, nombre, pass) VALUE (?,?,?)",
-      [dni, nombre, password]
-    );
-
-    if (result.affectedRows === 1) {
-      return res
-        .status(200)
-        .json({ message: "se creo el usuario", success: true });
+    if (dniExist) {
+      return res.json({ message: "ya existe el usuario" });
     } else {
-      return res
-        .status(500)
-        .json({ message: "no se creo el usuario", success: false });
+      const [row] = await cnn.query(
+        "INSERT INTO alumno( nombre, dni, pass ) values ( ?, ?, ?)",
+        [nombre, dni, pass]
+      );
+
+      if (row.affectedRows === 1) {
+        res.json({ message: "se creo el alumno con exito", success: true });
+      } else {
+        return res.status(500).json({ message: "no se creo el usuario" });
+      }
     }
   } catch (error) {
-    return res.status(500).json({ message: error, success: false });
+    console.log("create user", error);
+    res.json({
+      message: "No se pudo conectar con la base de datos",
+      success: false,
+    });
   }
 };
 
-//funcion para autenticar el token
+export const publico = (req, res) => {};
+
+export const privado = (req, res) => {
+  //validar el token
+};
+
+export const getToken = (payload) => {
+  try {
+    const token = jwt.sign(payload, secreto);
+    return token;
+  } catch (error) {
+    console.log(error);
+    return error;
+  }
+};
+
+export const getData = (req, res) => {
+  const user = req.user;
+  const materias = [
+    { id: 10, nombre: "web dinamica" },
+    { id: 12, nombre: "so" },
+    { id: 15, nombre: "arquitectura" },
+  ];
+  return res.status(200).json({ materias: materias, usuario: user });
+};
+
 export const auth = (req, res, next) => {
-  const tokenFront = req.headers["auth"];
+  const token = req.headers["auth"];
 
-  //verificar que hay un token
-  if (!tokenFront) return res.status(400).json({ message: "no hay token" });
+  if (!token) return res.status(400).json({ message: "sin token" });
 
-  jwt.verify(tokenFront, claveSecreta, (error, payload) => {
+  jwt.verify(token, secreto, (error, user) => {
     if (error) {
-      return res.status(400).json({ message: " el token no es valido" });
+      return res.status(400).json({ message: "token invalido" });
     } else {
-      req.payload = payload;
+      req.user = user;
       next();
     }
   });
 };
 
-export const getMateriasbyDni = (req, res) => {
+// addMateria: Cargar una nueva materia
+export const addMateria = async (req, res) => {
+  try {
+    const connection = await connect();
+    const { nombre } = req.body;
 
-  const dni = req.payload;
-  console.log(dni);
-  const materias = [
-    { id: 1, nombre: "so2" },
-    { id: 2, nombre: "web" },
-    { id: 3, nombre: "arquitectura" },
-  ];
+    const [result] = await connection.query(
+      "INSERT INTO materia (nombre_materia) VALUES (?)",
+      [nombre]
+    );
 
-  return res.status(200).json(materias);
+    if (result.affectedRows === 1) {
+      return res.status(200).json({ message: "Materia creada", success: true });
+    } else {
+      return res
+        .status(500)
+        .json({ message: "No se creó la materia", success: false });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error.message, success: false });
+  }
 };
 
-//funcion que devuelte el token
-const getToken = (payload) => {
-  const token = jwt.sign(payload, claveSecreta, { expiresIn: "1m" });
-  return token;
+// Relacionar usuario con materia
+export const cursar = async (req, res) => {
+  try {
+    const { dni, idMateria } = req.body;
+    const connection = await connect();
+
+    // Verificar si el alumno y la materia existen
+    const [alumnoResult] = await connection.query(
+      "SELECT * FROM alumno WHERE dni = ?",
+      [dni]
+    );
+    if (alumnoResult.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Alumno no encontrado", success: false });
+    }
+
+    const [materiaResult] = await connection.query(
+      "SELECT * FROM materia WHERE id_m = ?",
+      [idMateria]
+    );
+    if (materiaResult.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Materia no encontrada", success: false });
+    }
+
+    // Insertar la relación en la tabla cursar
+    const [row] = await connection.query(
+      "INSERT INTO cursar (dni, id_m) VALUES (?, ?)",
+      [dni, idMateria]
+    );
+
+    if (row.affectedRows === 1) {
+      return res
+        .status(200)
+        .json({ message: "Relación creada con éxito", success: true });
+    } else {
+      return res
+        .status(500)
+        .json({ message: "No se pudo crear la relación", success: false });
+    }
+  } catch (error) {
+    console.error("Error en la función cursar:", error);
+    return res
+      .status(500)
+      .json({ message: "Error en el servidor", success: false });
+  }
+};
+
+// Obtener materias de un alumno por ID
+export const getMateriaById = async (req, res) => {
+  try {
+    const { dni } = req.params;
+    const connection = await connect();
+
+    // Verificar si el alumno existe
+    const [alumnoResult] = await connection.query(
+      "SELECT * FROM alumno WHERE dni = ?",
+      [dni]
+    );
+    if (alumnoResult.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Alumno no encontrado", success: false });
+    }
+
+    // Obtener las materias que cursa el alumno
+    const [materiasResult] = await connection.query(
+      "SELECT m.id_m, m.nombre_materia FROM materia m INNER JOIN cursar c ON m.id_m = c.id_m WHERE c.dni = ?",
+      [dni]
+    );
+
+    if (materiasResult.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "El alumno no cursa ninguna materia",
+      });
+    }
+
+    return res.status(200).json({ success: true, materias: materiasResult });
+  } catch (error) {
+    console.error("Error en la función getMateriasByDni:", error);
+    return res
+      .status(500)
+      .json({ message: "Error en el servidor", success: false });
+  }
 };
