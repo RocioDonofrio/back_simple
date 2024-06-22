@@ -1,38 +1,106 @@
-//archivo para manejar las rutas de usuarios
-
 import { Router } from "express";
 import {
   auth,
   createUsers,
-  getMateriasbyDni,
+  getData,
   logIn,
+  addMateria,
+  cursar,
+  getMateriaById,
 } from "../controller/users";
 
-//objeto para manejo de url
 const routerUsers = Router();
 
-//Enpoint para loguear usuario
 /**
  * @swagger
  * /user/login:
- *  post:
- *      sumary: loguear usuario
+ *   post:
+ *     summary: Loguear usuario
+ *
+ *     responses:
+ *       200:
+ *         description: Login exitoso
+ *       400:
+ *         description: Usuario no existe
+ *       401:
+ *         description: Contraseña incorrecta
+ *       500:
+ *         description: Error del servidor
  */
 routerUsers.post("/user/login", logIn);
 
 /**
  * @swagger
- * /usersp:
- *  post:
- *      sumary: crea usuarios
+ * /user/usersp:
+ *   post:
+ *     summary: Crear usuario
+ *
+ *     responses:
+ *       200:
+ *         description: Usuario creado exitosamente
+ *       500:
+ *         description: Error del servidor
  */
 routerUsers.post("/user/usersp", createUsers);
 
 /**
  * @swagger
- * /getMaterias:
- *  get:
- *      sumary: devuelve las materias para un usuario determinado
+ * /user/getData:
+ *   get:
+ *     summary: Devuelve las materias de un usuario determinado
+ *
  */
-routerUsers.get("/user/getMaterias", auth, getMateriasbyDni);
+routerUsers.get("/user/getData", auth, getData);
+
+/**
+ * @swagger
+ * /user/addMateria:
+ *   post:
+ *     summary: Agregar una nueva materia
+ *
+ *     responses:
+ *       200:
+ *         description: Materia agregada exitosamente
+ *       500:
+ *         description: Error del servidor
+ */
+routerUsers.post("/user/addMateria", addMateria);
+
+/**
+ * @swagger
+ * /user/cursar:
+ *   post:
+ *     summary: Relacionar un usuario con una materia
+ *
+ *     responses:
+ *       200:
+ *         description: Materia asignada exitosamente
+ *       500:
+ *         description: Error del servidor
+ */
+routerUsers.post("/user/cursar", cursar);
+
+/**
+ * @swagger
+ * /user/getMateriaById/{dni}:
+ *   get:
+ *     summary: ODevolver las materias que cursa un alumno determinado
+ *     tags: [Usuarios, Materias]
+ *     parameters:
+ *       - in: path
+ *         name: dni
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: DNI del usuario
+ *     responses:
+ *       200:
+ *         description: Lista de materias cursadas
+ *       404:
+ *         description: No se encontraron materias
+ *       500:
+ *         description: Error del servidor
+ */
+routerUsers.get("/user/getMateriaById/:dni", getMateriaById);
+
 export default routerUsers;
