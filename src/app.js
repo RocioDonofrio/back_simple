@@ -15,10 +15,8 @@ app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json());
 
-//Rutas
 app.use(rutas);
 
-//documentacion
 app.use("/docs", swaggerUI.serve, swaggerUI.setup(spec));
 
 export default app;
