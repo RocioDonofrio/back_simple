@@ -29,7 +29,7 @@ Content-Type: application/json
     "password" : "1234"
 }
 
-### Obtener materias (requiere autenticación)
+### Obtener materias 
 
 GET {{getData}}
 auth: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMjQiLCJpYXQiOjE3MTc1OTA1OTMsImV4cCI6MTcxNzU5MTQ5M30.PzziAHXkPLqyvqEGx1xEiG-4WNe6KjROA66Frb9STPA
