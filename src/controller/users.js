@@ -19,10 +19,7 @@ export const logIn = async (req, res) => {
       //el usuario existe
       //comprar las contraseñas
       if (result[0].pass === password) {
-        // contraseña igual
-        //crear un token
         const token = getToken({ dni: dni });
-        //enviar al front
         return res
           .status(200)
           .json({ message: "correcto", success: true, token: token });
@@ -32,7 +29,6 @@ export const logIn = async (req, res) => {
           .json({ message: "la contraseña no coincide", success: false });
       }
     } else {
-      //usuario no existe
       return res
         .status(400)
         .json({ message: "user no existe", success: false });
@@ -43,30 +39,24 @@ export const logIn = async (req, res) => {
 };
 
 const validate = async (campo, valor, tabla, cnn) => {
-  //q guarda el query
   const q = `SELECT * FROM ${tabla} WHERE ${campo}=?`;
   const value = [valor];
 
   const [result] = await cnn.query(q, value);
 
-  return result.length === 1; //nos devuelve verdadero si hay un usuario y falso si no existe
+  return result.length === 1; 
 };
 
-//crear usuarios desde el sigup
 export const createUsers = async (req, res) => {
   try {
-    //establecer la conexion a la bd -> instanciando un objeto conexion
     const cnn = await connect();
-    //obtener lo que envio el front
     const { dni, nombre, password } = req.body;
 
     const userExist = await validate("dni", dni, "alumno", cnn);
 
-    //validar la existencia de el dni
     if (userExist)
       return res.status(400).json({ message: "el usuario ya existe" });
 
-    //insertar un registro a la base de datos -> usuario
     const [result] = await cnn.query(
       "INSERT INTO alumno ( dni, nombre, pass) VALUE (?,?,?)",
       [dni, nombre, password]
@@ -87,34 +77,26 @@ export const createUsers = async (req, res) => {
 };
 
 //funcion para autenticar el token
-//middleware
 export const auth = (req, res, next) => {
-  //obtener el token desde la peticion
   const tokenFront = req.headers["auth"];
 
   //verificar que hay un token
-  if (!tokenFront) return res.status(400).json({ message: "no hay token" }); //si no existe el troken en la peticion
+  if (!tokenFront) return res.status(400).json({ message: "no hay token" });
 
-  //si hay token, debemos validarlo
   jwt.verify(tokenFront, claveSecreta, (error, payload) => {
     if (error) {
-      //si el token no es validor
       return res.status(400).json({ message: " el token no es valido" });
     } else {
-      //el token es valido
       req.payload = payload;
       next();
     }
   });
 };
 
-//me de la lista de las materias de un alumno
 export const getMateriasbyDni = (req, res) => {
-  //vamos a simular el acceso a la base de datos para obtener la lista de materias que un alumno esta cursando
-  //obtener el dni de la request
+
   const dni = req.payload;
   console.log(dni);
-  //acceder a la base datos
   const materias = [
     { id: 1, nombre: "so2" },
     { id: 2, nombre: "web" },
@@ -124,7 +106,6 @@ export const getMateriasbyDni = (req, res) => {
   return res.status(200).json(materias);
 };
 
-//funciones privadas
 //funcion que devuelte el token
 const getToken = (payload) => {
   const token = jwt.sign(payload, claveSecreta, { expiresIn: "1m" });
